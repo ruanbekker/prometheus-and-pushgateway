@@ -1,0 +1,49 @@
+version: '3.8'
+
+x-logging:
+  &default-logging
+  driver: "json-file"
+  options:
+    max-size: "1m"
+    max-file: "1"
+    tag: "{{.Name}}"
+
+services:
+  prometheus:
+    image: prom/prometheus:${PROMETHEUS_VERSION:-latest}
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--log.level=error'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.external-url=http://localhost:9090'
+      - '--web.enable-admin-api'
+    volumes:
+      - ./configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports:
+      - 9090:9090
+    networks:
+      - monitoring
+    logging: *default-logging
+
+  pushgateway:
+    image: prom/pushgateway
+    container_name: pushgateway
+    ports:
+      - 9091:9091
+    networks:
+      - monitoring
+    logging: *default-logging
+
+volumes:
+  prometheus-data: {}
+
+networks:
+  monitoring:
+    name: monitoring
+
